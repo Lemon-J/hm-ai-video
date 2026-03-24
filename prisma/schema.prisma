@@ -1,0 +1,500 @@
+// 数据源配置
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 生成器配置
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 用户表
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 关联关系
+  accounts      Account[]
+  sessions      Session[]
+  projects      Project[]
+  assets        Asset[]
+  workflows     Workflow[]
+  apiKeys       ApiKey[]
+  subscriptions Subscription[]
+  scripts       Script[]
+  characters    Character[]
+  aiRequests    AiRequest[]
+
+  @@map("users")
+}
+
+// OAuth账户表
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// 会话表
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// 验证请求表
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// 项目表
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        ProjectType @default(SHORT_DRAMA)
+  status      ProjectStatus @default(DRAFT)
+  thumbnail   String?
+  config      Json? // 项目配置JSON
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  scripts     Script[]
+  scenes      Scene[]
+  characters  Character[]
+  videoClips  VideoClip[]
+  workflows   Workflow[]
+  assets      Asset[]
+  aiRequests  AiRequest[]
+
+  @@map("projects")
+}
+
+// 剧本表
+model Script {
+  id          String   @id @default(cuid())
+  title       String
+  content     Json     // 剧本内容（结构化JSON）
+  summary     String?
+  metadata    Json?    // 元数据（角色列表、场景数等）
+  
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  scenes      Scene[]
+  
+  @@map("scripts")
+}
+
+// 角色表
+model Character {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  traits      String[] // 角色特征数组
+  appearance  Json     // 外观描述JSON
+  voiceStyle  String?  // 配音风格
+  seed        String?  // 全局种子
+  
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  isTemplate  Boolean  @default(false) // 是否模板角色
+  usageCount  Int      @default(0)     // 使用次数
+  tags        String[] // 标签
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // 关联关系
+  assets      Asset[]
+  
+  @@map("characters")
+}
+
+// 场景表
+model Scene {
+  id          String    @id @default(cuid())
+  scriptId    String
+  script      Script    @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  order       Int       // 场景顺序
+  title       String
+  description String?
+  location    String?   // 场景地点
+  timeOfDay   String?   // 时间（白天/夜晚）
+  mood        String?   // 氛围
+  
+  characters  Json?     // 参与角色JSON
+  dialogue    Json?     // 对话内容JSON
+  actions     Json?     // 动作描述JSON
+  
+  // 分镜信息
+  shotType    String?   // 镜头类型（近景/中景/远景）
+  cameraAngle String?   // 摄像机角度
+  duration    Int?      // 预估时长（秒）
+  
+  // 生成状态
+  status      SceneStatus @default(PENDING)
+  aiPrompt    String?     // AI提示词
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // 关联关系
+  videoClips  VideoClip[]
+  
+  @@map("scenes")
+}
+
+// 资产表（统一管理角色、场景、道具等资产）
+model Asset {
+  id          String    @id @default(cuid())
+  name        String
+  type        AssetType
+  category    AssetCategory
+  
+  // 文件信息
+  url         String
+  thumbnail   String?
+  mimeType    String
+  fileSize    BigInt
+  dimensions  Json?     // 图片/视频尺寸 {width, height}
+  duration    Int?      // 视频/音频时长（秒）
+  
+  // 关联关系
+  characterId String?
+  character   Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 元数据
+  tags        String[]
+  description String?
+  seed        String?    // 生成种子
+  aiModel     String?    // 生成模型
+  prompt      String?    // 生成提示词
+  
+  // 全局复用
+  isGlobal    Boolean    @default(false)  // 是否全局资产
+  usageCount  Int        @default(0)      // 使用次数
+  isPublic    Boolean    @default(false)  // 是否公开
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  @@map("assets")
+}
+
+// 视频片段表
+model VideoClip {
+  id          String    @id @default(cuid())
+  sceneId     String
+  scene       Scene     @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  order       Int       // 片段顺序
+  startTime   Int       // 开始时间（秒）
+  endTime     Int       // 结束时间（秒）
+  
+  // 文件信息
+  url         String
+  thumbnail   String?
+  duration    Int
+  format      String    @default("mp4")
+  resolution  String    @default("1080p")
+  fps         Int       @default(30)
+  
+  // 关键帧驱动
+  startFrame  Json?     // 起始帧描述
+  endFrame    Json?     // 结束帧描述
+  transitions String?   // 转场效果
+  
+  // 音频信息
+  hasAudio    Boolean   @default(false)
+  audioUrl    String?
+  subtitle    Json?     // 字幕JSON
+  
+  // 生成信息
+  status      ClipStatus @default(GENERATING)
+  aiProvider  String?    // AI提供商
+  model       String?    // 模型名称
+  cost        Decimal?   // 生成成本
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  generatedAt DateTime?
+  
+  @@map("video_clips")
+}
+
+// 工作流表
+model Workflow {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 工作流定义
+  nodes       Json      // React Flow节点配置
+  edges       Json      // React Flow边配置
+  config      Json      // 工作流配置
+  
+  // 状态
+  status      WorkflowStatus @default(DRAFT)
+  isTemplate  Boolean        @default(false)
+  version     String         @default("1.0.0")
+  
+  // 执行统计
+  lastRunAt   DateTime?
+  runCount    Int            @default(0)
+  successRate Decimal?       // 成功率
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  @@map("workflows")
+}
+
+// AI请求记录表
+model AiRequest {
+  id          String    @id @default(cuid())
+  type        AiRequestType
+  provider    AiProvider
+  model       String
+  prompt      String
+  input       Json?     // 输入数据
+  output      Json?     // 输出数据
+  
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // 状态和成本
+  status      RequestStatus @default(PENDING)
+  cost        Decimal?
+  duration    Int?          // 处理时长（毫秒）
+  tokensUsed  Int?          // Token使用量
+  
+  // 错误信息
+  error       String?
+  retryCount  Int          @default(0)
+  
+  createdAt   DateTime      @default(now())
+  completedAt DateTime?
+  
+  @@map("ai_requests")
+}
+
+// API密钥表
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  key         String    @unique
+  provider    AiProvider
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  isActive    Boolean   @default(true)
+  usageCount  Int       @default(0)
+  lastUsedAt  DateTime?
+  
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  
+  @@map("api_keys")
+}
+
+// 订阅计划表
+model Subscription {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  plan        SubscriptionPlan @default(FREE)
+  status      SubscriptionStatus @default(ACTIVE)
+  
+  // 额度限制
+  maxProjects       Int     @default(3)
+  maxAssets         Int     @default(50)
+  maxVideoMinutes   Int     @default(10)
+  aiCredits         Decimal @default(0)
+  
+  // 计费信息
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean @default(false)
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  @@map("subscriptions")
+}
+
+// 枚举定义
+enum ProjectType {
+  SHORT_DRAMA    // 短剧
+  ANIMATION      // 动画
+  COMMERCIAL     // 商业广告
+  EDUCATIONAL    // 教育视频
+  EXPERIMENTAL   // 实验性
+}
+
+enum ProjectStatus {
+  DRAFT          // 草稿
+  IN_PROGRESS    // 进行中
+  REVIEW         // 审核中
+  COMPLETED      // 已完成
+  ARCHIVED       // 已归档
+}
+
+enum SceneStatus {
+  PENDING        // 待处理
+  SCRIPTED       // 已编写
+  STORYBOARDED   // 已分镜
+  GENERATING     // 生成中
+  GENERATED      // 已生成
+  REVIEW         // 审核中
+  APPROVED       // 已批准
+}
+
+enum AssetType {
+  IMAGE          // 图片
+  VIDEO          // 视频
+  AUDIO          // 音频
+  MODEL_3D       // 3D模型
+  TEXTURE        // 纹理
+  FONT           // 字体
+  TEMPLATE       // 模板
+}
+
+enum AssetCategory {
+  CHARACTER      // 角色
+  SCENE          // 场景
+  PROP           // 道具
+  BACKGROUND     // 背景
+  EFFECT         // 特效
+  SOUND          // 音效
+  MUSIC          // 音乐
+  VOICE          // 配音
+}
+
+enum ClipStatus {
+  PENDING        // 待处理
+  GENERATING     // 生成中
+  PROCESSING     // 处理中
+  COMPLETED      // 已完成
+  FAILED         // 失败
+  CANCELLED      // 已取消
+}
+
+enum WorkflowStatus {
+  DRAFT          // 草稿
+  ACTIVE         // 活跃
+  PAUSED         // 暂停
+  ARCHIVED       // 归档
+}
+
+enum AiRequestType {
+  SCRIPT_ANALYSIS    // 剧本分析
+  CHARACTER_DESIGN   // 角色设计
+  SCENE_GENERATION   // 场景生成
+  VOICE_SYNTHESIS    // 语音合成
+  VIDEO_GENERATION   // 视频生成
+  IMAGE_GENERATION   // 图片生成
+  PROMPT_OPTIMIZATION // 提示词优化
+}
+
+enum AiProvider {
+  GEMINI          // Google Gemini
+  CLAUDE          // Anthropic Claude
+  SEEDANCE        // Seedance
+  KLING           // Kling
+  OPENAI          // OpenAI
+  REPLICATE       // Replicate
+  STABILITY       // Stability AI
+  LOCAL          // 本地模型
+}
+
+enum RequestStatus {
+  PENDING         // 待处理
+  PROCESSING      // 处理中
+  COMPLETED       // 已完成
+  FAILED          // 失败
+  CANCELLED       // 已取消
+}
+
+enum SubscriptionPlan {
+  FREE            // 免费版
+  BASIC           // 基础版
+  PRO             // 专业版
+  ENTERPRISE      // 企业版
+}
+
+enum SubscriptionStatus {
+  ACTIVE          // 活跃
+  TRIALING        // 试用中
+  PAST_DUE        // 逾期
+  CANCELLED       // 已取消
+  INCOMPLETE      // 不完整
+  INCOMPLETE_EXPIRED // 过期不完整
+}
