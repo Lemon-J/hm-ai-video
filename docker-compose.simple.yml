@@ -1,0 +1,136 @@
+# Docker Compose配置 - 完整部署方案
+# version字段已废弃，Docker Compose会自动识别
+
+services:
+  # PostgreSQL数据库
+  db:
+    image: postgres:15-alpine
+    container_name: hm-ai-video-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hm_ai_video
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - ai-video-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis缓存和队列
+  redis:
+    image: redis:7-alpine
+    container_name: hm-ai-video-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ai-video-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Next.js应用
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app-production
+    container_name: hm-ai-video-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/hm_ai_video
+      - REDIS_URL=redis://redis:6379
+      - NEXTAUTH_URL=http://192.168.184.128:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - UPLOADTHING_SECRET=${UPLOADTHING_SECRET}
+      - UPLOADTHING_APP_ID=${UPLOADTHING_APP_ID}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - SEEDANCE_API_KEY=${SEEDANCE_API_KEY}
+      - KLING_API_KEY=${KLING_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai-video-network
+    restart: unless-stopped
+
+  # 后台任务队列Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker-production
+    container_name: hm-ai-video-worker
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/hm_ai_video
+      - REDIS_URL=redis://redis:6379
+      - NEXTAUTH_URL=http://192.168.184.128:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - SEEDANCE_API_KEY=${SEEDANCE_API_KEY}
+      - KLING_API_KEY=${KLING_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai-video-network
+    restart: unless-stopped
+
+  # 数据库管理界面(可选)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: hm-ai-video-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@ai-video.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - ai-video-network
+    restart: unless-stopped
+
+  # Redis管理界面(可选)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: hm-ai-video-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - ai-video-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  ai-video-network:
+    driver: bridge

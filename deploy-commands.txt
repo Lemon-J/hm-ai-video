@@ -1,0 +1,48 @@
+cd /home/jiaok/hm-ai-video
+
+echo "解压源代码..."
+tar -xzf hm-ai-video-src.tar.gz
+rm -f hm-ai-video-src.tar.gz
+
+echo "检查Docker和Docker Compose..."
+if ! command -v docker &> /dev/null; then
+    echo "错误：Docker未安装"
+    exit 1
+fi
+
+if ! command -v docker-compose &> /dev/null; then
+    echo "警告：docker-compose未安装，尝试安装..."
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+fi
+
+echo "停止现有服务..."
+docker-compose -f docker-compose.simple.yml down 2>/dev/null || true
+
+echo "清理旧镜像..."
+docker rmi -f hm-ai-video-app hm-ai-video-worker 2>/dev/null || true
+
+echo "构建新镜像..."
+chmod +x clean-and-rebuild-docker.sh
+./clean-and-rebuild-docker.sh
+
+echo "启动服务..."
+docker-compose -f docker-compose.simple.yml up -d
+
+echo "等待服务启动..."
+sleep 10
+
+echo "检查服务状态..."
+echo ""
+echo "=== 容器状态 ==="
+docker ps --filter "name=hm-ai-video" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+echo ""
+echo "=== 应用日志（最后10行）==="
+docker logs --tail 10 hm-ai-video-app 2>/dev/null || echo "应用容器日志不可用"
+
+echo ""
+echo "=== 部署完成 ==="
+echo "应用地址: http://192.168.184.128:3000"
+echo "数据库管理: http://192.168.184.128:5050 (用户名: admin@ai-video.com, 密码: admin)"
+echo "Redis管理: http://192.168.184.128:8081"

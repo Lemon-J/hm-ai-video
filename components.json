@@ -1,0 +1,149 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "styles/globals.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils"
+  },
+  "components": [
+    {
+      "name": "accordion",
+      "path": "./components/ui/accordion.tsx",
+      "files": ["accordion.tsx"]
+    },
+    {
+      "name": "alert",
+      "path": "./components/ui/alert.tsx",
+      "files": ["alert.tsx"]
+    },
+    {
+      "name": "alert-dialog",
+      "path": "./components/ui/alert-dialog.tsx",
+      "files": ["alert-dialog.tsx"]
+    },
+    {
+      "name": "avatar",
+      "path": "./components/ui/avatar.tsx",
+      "files": ["avatar.tsx"]
+    },
+    {
+      "name": "badge",
+      "path": "./components/ui/badge.tsx",
+      "files": ["badge.tsx"]
+    },
+    {
+      "name": "button",
+      "path": "./components/ui/button.tsx",
+      "files": ["button.tsx"]
+    },
+    {
+      "name": "card",
+      "path": "./components/ui/card.tsx",
+      "files": ["card.tsx"]
+    },
+    {
+      "name": "checkbox",
+      "path": "./components/ui/checkbox.tsx",
+      "files": ["checkbox.tsx"]
+    },
+    {
+      "name": "dialog",
+      "path": "./components/ui/dialog.tsx",
+      "files": ["dialog.tsx"]
+    },
+    {
+      "name": "dropdown-menu",
+      "path": "./components/ui/dropdown-menu.tsx",
+      "files": ["dropdown-menu.tsx"]
+    },
+    {
+      "name": "form",
+      "path": "./components/ui/form.tsx",
+      "files": ["form.tsx"]
+    },
+    {
+      "name": "input",
+      "path": "./components/ui/input.tsx",
+      "files": ["input.tsx"]
+    },
+    {
+      "name": "label",
+      "path": "./components/ui/label.tsx",
+      "files": ["label.tsx"]
+    },
+    {
+      "name": "popover",
+      "path": "./components/ui/popover.tsx",
+      "files": ["popover.tsx"]
+    },
+    {
+      "name": "radio-group",
+      "path": "./components/ui/radio-group.tsx",
+      "files": ["radio-group.tsx"]
+    },
+    {
+      "name": "select",
+      "path": "./components/ui/select.tsx",
+      "files": ["select.tsx"]
+    },
+    {
+      "name": "separator",
+      "path": "./components/ui/separator.tsx",
+      "files": ["separator.tsx"]
+    },
+    {
+      "name": "sheet",
+      "path": "./components/ui/sheet.tsx",
+      "files": ["sheet.tsx"]
+    },
+    {
+      "name": "skeleton",
+      "path": "./components/ui/skeleton.tsx",
+      "files": ["skeleton.tsx"]
+    },
+    {
+      "name": "slider",
+      "path": "./components/ui/slider.tsx",
+      "files": ["slider.tsx"]
+    },
+    {
+      "name": "switch",
+      "path": "./components/ui/switch.tsx",
+      "files": ["switch.tsx"]
+    },
+    {
+      "name": "table",
+      "path": "./components/ui/table.tsx",
+      "files": ["table.tsx"]
+    },
+    {
+      "name": "tabs",
+      "path": "./components/ui/tabs.tsx",
+      "files": ["tabs.tsx"]
+    },
+    {
+      "name": "textarea",
+      "path": "./components/ui/textarea.tsx",
+      "files": ["textarea.tsx"]
+    },
+    {
+      "name": "toast",
+      "path": "./components/ui/toast.tsx",
+      "files": ["toast.tsx"]
+    },
+    {
+      "name": "tooltip",
+      "path": "./components/ui/tooltip.tsx",
+      "files": ["tooltip.tsx"]
+    }
+  ]
+}
